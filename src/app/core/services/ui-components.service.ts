@@ -25,9 +25,11 @@ export class UiComponentsService {
     return this.isLoadingListener.asObservable();;
   }
 
-  showSnackbar(message, action, duration) {
+  showSnackbar(message, action, duration?) {
     this.snackbar.open(message, action, {
-      duration
+      duration,
+      data: 'testtttttt'
+      // panelClass:
     });
   }
 

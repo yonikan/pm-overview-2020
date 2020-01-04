@@ -4,6 +4,10 @@ import { ServerEnvService } from 'src/app/core/services/server-env.service';
 import { AuthService } from 'src/app/auth/auth.service';
 import { Subscription, pipe } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { UiComponentsService } from 'src/app/core/services/ui-components.service';
+import { MatSnackBar, MatDialog } from '@angular/material';
+import { ErrorModalComponent } from 'src/app/core/components/error-modal/error-modal.component';
+import { ValidatedEventsToastComponent } from 'src/app/core/components/validated-events-toast/validated-events-toast.component';
 
 @Injectable({
   providedIn: 'root'
@@ -18,10 +22,18 @@ export class ValidatedEventsService {
   constructor(
     private http: HttpClient,
     public authService: AuthService,
+    private dialog: MatDialog,
+    // private uiComponentsService: UiComponentsService,
+    private snackbar: MatSnackBar,
     private serverEnvService: ServerEnvService
   ) { }
 
   getTeamEventPdfReport(teamEventId: number, reportType: string) {
+
+    // this.uiComponentsService.showSnackbar('Pdf report is being generated', null);
+    this.snackbar.openFromComponent(ValidatedEventsToastComponent);
+    // this.snackbar.open('Download In Progress', null);
+    
     this.userLoginDataSub = this.authService
       .getUserLoginDataListener()
       .pipe(
@@ -59,6 +71,8 @@ export class ValidatedEventsService {
         },
         (error) => {
           console.log('error: ', error);
+          this.snackbar.dismiss();
+          this.openValidatedEventsModal('errorModal');
         }
       );
   }
@@ -68,7 +82,7 @@ export class ValidatedEventsService {
     this.individualPlayersReportPollInterval = setInterval(this.pollPdfReportData.bind(this), 3000, jobId, teamEventId);
     setTimeout(() => { 
       this.clearIntervalEndTimer('failedToRetrieve');
-    }, 20000);
+    }, 9000);
   }
 
   pollPdfReportData(jobId: number, teamEventId: number) {
@@ -89,13 +103,38 @@ export class ValidatedEventsService {
   }
 
   clearIntervalEndTimer(retStatus: string) {
+    console.log('=========== retStatus: ', retStatus);
     clearInterval(this.individualPlayersReportPollInterval);
+    this.snackbar.dismiss();
+
     if (retStatus === 'succeedToRetrieve') {
       console.log('succeed To Retrieve!!!');
-      // this.$refs['individualPlayersReportSuccessModal'].show()
-    } else if (retStatus === 'failedToRetrieve' && this.individualPlayersReportJobStatusSucceed === false) {
+      this.openValidatedEventsModal('successModal');
+    // } else if (retStatus === 'failedToRetrieve' && this.individualPlayersReportJobStatusSucceed === false) {
+    } else if (retStatus === 'failedToRetrieve') {
       console.log('individual Players Report Error!!!');
-      // this.$refs['individualPlayersReportErrorModal'].show()
+      this.openValidatedEventsModal('errorModal');
     }
+  }
+
+  openValidatedEventsModal(modalType) {
+    let modalTitle;
+    let modalMessage;
+    if (modalType === 'successModal') {
+      modalTitle = 'File Successfully Downloaded';
+      modalMessage = `All the reports were sent to your email.`;
+    } else if (modalType === 'errorModal') {
+      modalTitle = 'Download Failed';
+      modalMessage = `The file you requested could not be downloaded. Please try again later or contact support.`;
+    }
+
+    this.dialog.open(ErrorModalComponent, {
+      width: '500px',
+      height: '200px',
+      data: { 
+        title: modalTitle,
+        message: modalMessage
+      }
+    });
   }
 }
